@@ -2,11 +2,15 @@ import customtkinter as ctk
 import paho.mqtt.client as mqtt
 import requests
 import random
-from PIL import Image
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from PIL import Image, ImageTk
 from io import BytesIO
+
 
 #funções auxiliares
 get_char_id = lambda a,b: random.randint(a, b)
+disco_percentual = "0"
 
 ##requests (aquisições)
 def request_api(url):
@@ -60,7 +64,7 @@ def on_message(client, userdata, mensagem):
 
 cliente = mqtt.Client()
 cliente.on_message = on_message
-cliente.connect("test.mosquitto.org")
+cliente.connect("localhost")
 cliente.subscribe("UFSC/DAS/NEMO")
 cliente.loop_start() 
     
@@ -77,14 +81,34 @@ def atualizar_contador():
         texto_freq_max.set(f"FREQ BASE: {dados[5]} MHz") #É pra ser constante, apenas teste
         disco_usado.set(f"DISCO USADO: {dados[7]}b")
         disco_livre.set(f"DISCO LIVRE: {dados[8]}b")
+        global disco_percentual 
+        disco_percentual = dados[9].replace("]","")
     janela.after(1000, atualizar_contador) 
 
 #GRÁFICO
+def generate_graph(disco):
+    # Criação de um gráfico simples usando matplotlib
+    fig = Figure(figsize=(4, 3), dpi=100,facecolor="#242424")
+    ax = fig.add_subplot(111)
+    ax.pie([int(disco),100 - int(disco)],labels=["USADO", "LIVRE"], autopct='%1.1f%%', startangle=45, textprops={"color":"white"},)
+    ax.set_title("USO DISCO (C:)",color="white")
+    ax.axis("equal")
 
+    # Converte o gráfico para uma imagem PIL
+    buf = BytesIO()
+    fig.savefig(buf, format='png', bbox_inches='tight')
+    buf.seek(0)
+    img = Image.open(buf)
 
-#fazer função
+    return img
 
-
+def atualize_graph():
+    if valor_recebido is None:
+        return
+    disco = float(valor_recebido.split(",")[9].replace("]",""))
+    new_image = ctk.CTkImage(generate_graph(disco), size=(graf_size))
+    graf_label.configure(image=new_image)
+    #graf_label.image = new_image
 
 #configuração da janela
 janela = ctk.CTk()
@@ -132,6 +156,14 @@ ctk.CTkLabel(frame2, textvariable=texto_freq_max, font=("courier", 14),).pack(an
 ctk.CTkLabel(frame2, textvariable=disco_usado, font=("courier", 14),).pack(anchor="w",pady=4)
 ctk.CTkLabel(frame2, textvariable=disco_livre, font=("courier", 14),).pack(anchor="w",pady=4)
 
+#gráfico
+initial_img = generate_graph(disco_percentual)
+graf_size = [janela.winfo_width()*1.1, janela.winfo_height()*1.1]
+initial_ctk_image = ctk.CTkImage(initial_img, size=(graf_size))
+graf_label = ctk.CTkLabel(janela, text="",fg_color="transparent",image=initial_ctk_image)
+graf_label.place(relx=0.5, y=200, anchor="center")
+ctk.CTkButton(janela, text="Atualizar", command=lambda:atualize_graph()).place(relx=0.5, rely=0.9, anchor="center")
+
 ##tab view (à direita)
 tabview = ctk.CTkTabview(janela, width=220, height=700)
 tabview.pack(expand = True, anchor="e",padx=10,pady=10)
@@ -148,12 +180,13 @@ db_img = ctk.CTkImage(dark_image=db_hd_img, size=(170, 240))
 
 #ajustando a tabela
 tb_lb_1 = ctk.CTkLabel(tabview.tab("Pókemon"),image= poke_img,text="")  #width=50
-tb_lb_1_text = ctk.CTkLabel(tabview.tab("Pókemon"),text = pk_hd_text, font=("impact", 24))
+tb_lb_1_text = ctk.CTkLabel(tabview.tab("Pókemon"),text = pk_hd_text.upper(), font=("impact", 24))
 tb_lb_2 = ctk.CTkLabel(tabview.tab("Dragon Ball"),image= db_img,text="").pack(pady=20)
-tb_lb_2_text = ctk.CTkLabel(tabview.tab("Dragon Ball"),text = db_hd_text, font=("impact", 24)).pack()
+tb_lb_2_text = ctk.CTkLabel(tabview.tab("Dragon Ball"),text = db_hd_text.upper(), font=("impact", 24)).pack()
 tb_lb_1.pack(pady=20)
 tb_lb_1_text.pack()
 
+print(valor_recebido)
 contador = 0 #usado para atualizar o contador
 #loop
 atualizar_contador()

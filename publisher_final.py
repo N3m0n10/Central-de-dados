@@ -1,17 +1,16 @@
 import paho.mqtt.client as mqtt
 import time
-import random
 import psutil as ps
 import json
 
 cliente = mqtt.Client()                 # Cria um cliente MQTT
-cliente.connect("test.mosquitto.org")   # Conecta ao broker
+cliente.connect("localhost")   # Conecta ao broker
 
 while True:
 ##aquisições
   cpu_use = ps.cpu_percent()
   ram_use = ps.virtual_memory().percent
-  cpu_bat = ps.sensors_battery() #nootebook
+  cpu_bat = ps.sensors_battery() #notebook
   cpu_freq = ps.cpu_freq()
   disco = ps.disk_usage('c:')
   payload = [
