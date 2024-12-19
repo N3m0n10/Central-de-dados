@@ -7,7 +7,6 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 from PIL import Image, ImageTk
 from io import BytesIO
 
-
 #funções auxiliares
 get_char_id = lambda a,b: random.randint(a, b)
 disco_percentual = "0"
@@ -79,16 +78,20 @@ def atualizar_contador():
         texto_carregando_bateria.set(f"CARREGANDO: {dados[3]}") 
         texto_freq_atual.set(f"FREQ ATUAL: {dados[4]} MHz") 
         texto_freq_max.set(f"FREQ BASE: {dados[5]} MHz") #É pra ser constante, apenas teste
-        disco_usado.set(f"DISCO USADO: {dados[7]}b")
-        disco_livre.set(f"DISCO LIVRE: {dados[8]}b")
+        disco_usado.set(f"DISCO USADO: {int(float(dados[7])/10**9)}Gb")
+        disco_livre.set(f"DISCO LIVRE: {int(float(dados[8])/10**9)}Gb")
         global disco_percentual 
         disco_percentual = dados[9].replace("]","")
     janela.after(1000, atualizar_contador) 
 
 #GRÁFICO
-def generate_graph(disco):
+def generate_graph(self,disco):
     # Criação de um gráfico simples usando matplotlib
-    fig = Figure(figsize=(4, 3), dpi=100,facecolor="#242424")
+    if self._get_appearance_mode() == "dark":
+        fc_color = "#242424"
+    else:
+        fc_color = "#EBEBEB"
+    fig = Figure(figsize=(4, 3), dpi=100,facecolor=fc_color)
     ax = fig.add_subplot(111)
     ax.pie([int(disco),100 - int(disco)],labels=["USADO", "LIVRE"], autopct='%1.1f%%', startangle=45, textprops={"color":"white"},)
     ax.set_title("USO DISCO (C:)",color="white")
@@ -106,7 +109,7 @@ def atualize_graph():
     if valor_recebido is None:
         return
     disco = float(valor_recebido.split(",")[9].replace("]",""))
-    new_image = ctk.CTkImage(generate_graph(disco), size=(graf_size))
+    new_image = ctk.CTkImage(generate_graph(janela,disco), size=(graf_size))
     graf_label.configure(image=new_image)
     #graf_label.image = new_image
 
@@ -117,7 +120,7 @@ janela.iconbitmap("icon.ico")
 janela.geometry("720x480")
 janela.minsize(width= 640, height=420)
 #janela.configure()
-janela._set_appearance_mode("system")  #modo claro ou escuro de acordo com o sistema
+janela._set_appearance_mode("system")  #modo claro ou escuro de acordo com o sistema 
 #janela.iconify() #fecha a janela
 #janela.withdraw()
 #janela.update() #chamar antes de deiconify
@@ -146,10 +149,10 @@ disco_usado.set(0)
 frame2 = ctk.CTkFrame(janela)#janela.winfo_width()-
 frame2.place( relx=0.02, rely=0.6, anchor="w",relheight=0.8,relwidth=0.3)
 ctk.CTkLabel(frame2, textvariable=texto_ram, font=("courier", 14)).pack(anchor="w",pady=4)
-ctk.CTkLabel(frame2, text="BATERIA", font=("arial", 18),text_color="cyan").pack(anchor="center",pady=5)
+ctk.CTkLabel(frame2, text="BATERIA", font=("arial", 18),text_color="#1F77B4").pack(anchor="center",pady=5)
 ctk.CTkLabel(frame2, textvariable=texto_perc_bateria, font=("courier", 14),).pack(anchor="w",pady=4)
 ctk.CTkLabel(frame2, textvariable=texto_carregando_bateria, font=("courier", 14),).pack(anchor="w",pady=2)
-ctk.CTkLabel(frame2, text="CPU", font=("Arial", 18),text_color="cyan").pack(anchor="center",pady=5)
+ctk.CTkLabel(frame2, text="CPU", font=("Arial", 18),text_color="#1F77B4").pack(anchor="center",pady=5)
 ctk.CTkLabel(frame2, textvariable=texto_cpu, font=("courier", 14)).pack(anchor="w",pady=4)
 ctk.CTkLabel(frame2, textvariable=texto_freq_atual, font=("courier", 14),).pack(anchor="w",pady=4)
 ctk.CTkLabel(frame2, textvariable=texto_freq_max, font=("courier", 14),).pack(anchor="w",pady=4)
@@ -157,7 +160,7 @@ ctk.CTkLabel(frame2, textvariable=disco_usado, font=("courier", 14),).pack(ancho
 ctk.CTkLabel(frame2, textvariable=disco_livre, font=("courier", 14),).pack(anchor="w",pady=4)
 
 #gráfico
-initial_img = generate_graph(disco_percentual)
+initial_img = generate_graph(janela,disco_percentual)
 graf_size = [janela.winfo_width()*1.1, janela.winfo_height()*1.1]
 initial_ctk_image = ctk.CTkImage(initial_img, size=(graf_size))
 graf_label = ctk.CTkLabel(janela, text="",fg_color="transparent",image=initial_ctk_image)
@@ -176,7 +179,7 @@ tabview.tab("Dragon Ball").grid_columnconfigure(0, weight=1)
 pk_hd_text,pk_hd_img = request_pkemon() 
 poke_img = ctk.CTkImage(dark_image=pk_hd_img, size=(190, 200))
 db_hd_text,db_hd_img = request_dragonball() 
-db_img = ctk.CTkImage(dark_image=db_hd_img, size=(170, 240))
+db_img = ctk.CTkImage(dark_image=db_hd_img, size=(150, 220))
 
 #ajustando a tabela
 tb_lb_1 = ctk.CTkLabel(tabview.tab("Pókemon"),image= poke_img,text="")  #width=50
