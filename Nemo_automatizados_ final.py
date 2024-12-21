@@ -46,14 +46,21 @@ def request_pkemon():
     return pk_name, pk_img
 
 def request_dragonball():
-    char_id = get_char_id(1,35)
+    char_id = get_char_id(1,35) #atulizar para valores possíveis
     db_url = f"https://dragonball-api.com/api/characters/{char_id}"
     db_data = request_api(db_url)
     db_name = db_data["name"]
     db_img_url = db_data["image"]
     response = requests.get(db_img_url)
     db_img = Image.open(BytesIO(response.content))
-    return db_name, db_img
+    global has_trsfrm
+    if db_data["transformations"] != (None or []):
+        db_form = db_data["transformations"]
+        has_trsfrm = True
+    else:
+        db_form = None
+        has_trsfrm = False
+    return db_name, db_img, db_form
     
 valor_recebido = None    # Sim, uma variável global! As vezes, elas são úteis
 
@@ -84,6 +91,22 @@ def atualizar_contador():
         disco_percentual = dados[9].replace("]","")
     janela.after(1000, atualizar_contador) 
 
+def db_tranform(forms):   #FAZER____________
+    global num_forms
+    global actual_form
+    num_forms = len(forms)
+    if actual_form == num_forms:
+        actual_form = 0
+        tb_lb_2.configure(image=db_img)
+        tb_lb_2_text.configure(text=db_hd_text)
+    else:
+        db_img_url_form = db_hd_form[actual_form]["image"]
+        response = requests.get(db_img_url_form)
+        db_img_form = Image.open(BytesIO(response.content))
+        tb_lb_2.configure(image=ctk.CTkImage(db_img_form, size=(150, 200)))
+        tb_lb_2_text.configure(text=db_hd_form[actual_form]["name"].upper())
+        actual_form += 1
+
 #GRÁFICO
 def generate_graph(self,disco):
     # Criação de um gráfico simples usando matplotlib
@@ -100,7 +123,7 @@ def generate_graph(self,disco):
     # Converte o gráfico para uma imagem PIL
     buf = BytesIO()
     fig.savefig(buf, format='png', bbox_inches='tight')
-    buf.seek(0)
+    buf.seek(0) #image.open(buf) lê do inicio do buffer
     img = Image.open(buf)
 
     return img
@@ -165,7 +188,7 @@ graf_size = [janela.winfo_width()*1.1, janela.winfo_height()*1.1]
 initial_ctk_image = ctk.CTkImage(initial_img, size=(graf_size))
 graf_label = ctk.CTkLabel(janela, text="",fg_color="transparent",image=initial_ctk_image)
 graf_label.place(relx=0.5, y=200, anchor="center")
-ctk.CTkButton(janela, text="Atualizar", command=lambda:atualize_graph()).place(relx=0.5, rely=0.9, anchor="center")
+ctk.CTkButton(janela, text="Atualizar", command=lambda:atualize_graph()).place(relx=0.5, y=370, anchor="center")
 
 ##tab view (à direita)
 tabview = ctk.CTkTabview(janela, width=220, height=700)
@@ -178,19 +201,26 @@ tabview.tab("Dragon Ball").grid_columnconfigure(0, weight=1)
 #arquivando texto e imagem
 pk_hd_text,pk_hd_img = request_pkemon() 
 poke_img = ctk.CTkImage(dark_image=pk_hd_img, size=(190, 200))
-db_hd_text,db_hd_img = request_dragonball() 
-db_img = ctk.CTkImage(dark_image=db_hd_img, size=(150, 220))
+db_hd_text,db_hd_img, db_hd_form = request_dragonball() 
+global db_img
+db_img = ctk.CTkImage(dark_image=db_hd_img, size=(150, 200))
 
 #ajustando a tabela
 tb_lb_1 = ctk.CTkLabel(tabview.tab("Pókemon"),image= poke_img,text="")  #width=50
 tb_lb_1_text = ctk.CTkLabel(tabview.tab("Pókemon"),text = pk_hd_text.upper(), font=("impact", 24))
-tb_lb_2 = ctk.CTkLabel(tabview.tab("Dragon Ball"),image= db_img,text="").pack(pady=20)
-tb_lb_2_text = ctk.CTkLabel(tabview.tab("Dragon Ball"),text = db_hd_text.upper(), font=("impact", 24)).pack()
+tb_lb_2 = ctk.CTkLabel(tabview.tab("Dragon Ball"),image= db_img,text="")
+tb_lb_2_text = ctk.CTkLabel(tabview.tab("Dragon Ball"),text = db_hd_text.upper(), font=("impact", 24))
+tb_lb_2.pack(pady=20)
+tb_lb_2_text.pack()
 tb_lb_1.pack(pady=20)
 tb_lb_1_text.pack()
+if has_trsfrm == True:
+    ctk.CTkButton(tabview.tab("Dragon Ball"), text="",corner_radius=90,width=30,command=lambda:db_tranform(db_hd_form)\
+                  ,image=ctk.CTkImage(light_image=Image.open("seta.png"), size=(25, 25)),fg_color='transparent').place(relx = 0.74,rely=0.12)   
 
 print(valor_recebido)
 contador = 0 #usado para atualizar o contador
+actual_form = 0 #forma inicial base
 #loop
 atualizar_contador()
 janela.mainloop()
